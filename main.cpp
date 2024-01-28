@@ -1,5 +1,7 @@
 #include <iostream>
 #include <vector>
+#include <list>
+#include <forward_list>
 #include <climits>
 #include <cmath>
 
@@ -12,6 +14,20 @@ void insertion_sort(std::vector<int> &v) {
             --j;
         }
         v[j + 1] = key;
+    }
+}
+
+// find max element in v and exchange it with last element in v
+// effectively, sort in increasing order
+void selection_sort(std::vector<int> &v) {
+    for (int right = v.size() - 1; right >= 1; --right) {
+        int max_index = 0;
+        for (int i = 1; i <= right; ++i) {
+            if (v[i] > v[max_index]) {
+                max_index = i;
+            }
+        }
+        std::swap(v[right], v[max_index]);
     }
 }
 
@@ -222,6 +238,114 @@ void radix_sort(std::vector<int> &v, int d) {
     }
 }
 
+// assume each element in v is in [0, 1)
+std::list<double> bucket_sort(std::vector<double> &v) {
+    // B is a bucket of linked lists
+    std::vector<std::list<double>> B(v.size());
+    for (int i = 0; i < v.size(); ++i) {
+        B[(int)(v.size() * v[i])].push_back(v[i]);
+    }
+    for (int i = 0; i < v.size(); ++i) {
+        B[i].sort();
+    }
+    std::list<double> C;
+    for (int i = 0; i < v.size(); ++i) {
+        C.splice(C.end(), B[i]);
+    }
+    return C;
+}
+
+int minimum(const std::vector<int> &v) {
+    if (v.size() == 0) {
+        std::cerr << "Error: empty vector." << std::endl;
+        exit(1);
+    }
+    int min = v[0];
+    for (int i = 1; i < v.size(); ++i) {
+        if (v[i] < min) {
+            min = v[i];
+        }
+    }
+    return min;
+}
+
+template <typename T>
+std::pair<T, T> maximum_and_minimum(const std::vector<T> &v) {
+    if (v.size() == 0) {
+        std::cerr << "Error: empty vector." << std::endl;
+        exit(1);
+    }
+    T max;
+    T min;
+    // if n is even
+    if (v.size() % 2 == 0) {
+        if (v[0] > v[1]) {
+            max = v[0];
+            min = v[1];
+        } else {
+            max = v[1];
+            min = v[0];
+        }
+        // process next pair
+        for (int i = 2; i < v.size(); i += 2) {
+            if (v[i] > v[i + 1]) {
+                if (v[i] > max) {
+                    max = v[i];
+                }
+                if (v[i + 1] < min) {
+                    min = v[i + 1];
+                }
+            } else {
+                if (v[i + 1] > max) {
+                    max = v[i + 1];
+                }
+                if (v[i] < min) {
+                    min = v[i];
+                }
+            }
+        }
+    } else {
+        max = v[0];
+        min = v[0];
+        // process next pair
+        for (int i = 1; i < v.size(); i += 2) {
+            if (v[i] > v[i + 1]) {
+                if (v[i] > max) {
+                    max = v[i];
+                }
+                if (v[i + 1] < min) {
+                    min = v[i + 1];
+                }
+            } else {
+                if (v[i + 1] > max) {
+                    max = v[i + 1];
+                }
+                if (v[i] < min) {
+                    min = v[i];
+                }
+            }
+        }
+    }
+
+    return std::make_pair(max, min);
+}
+
+// return the ith smallest element in v[p, r]
+int randomized_select(std::vector<int> &v, int p, int r, int i) {
+    if (p == r) {
+        return v[p];
+    }
+    int q = randomized_partition(v, p, r);
+    int k = q - p + 1;
+    if (i == k) {
+        return v[q];
+    } else if (i < k) {
+        return randomized_select(v, p, q - 1, i);
+    } else {
+        return randomized_select(v, q + 1, r, i - k);
+    }
+}
+
 std::vector<std::vector<int>> matrix_multiply(const std::vector<std::vector<int>> &A, const std::vector<std::vector<int>> &B) {
     std::vector<std::vector<int>> C(A.size(), std::vector<int>(B[0].size()));
     for (int i = 0; i < A.size(); ++i) {
@@ -323,17 +447,27 @@ int main() {
     // randomized_quick_sort(v, 0, v.size() - 1);
 
     // std::vector<int> v2 = counting_sort(v, 6);
-    
     // for (auto i : v2) {
     //     std::cout << i << " ";
     // }
     // std::cout << std::endl;
 
-    std::vector<int> v2 = {329, 457, 657, 839, 436, 720, 355};
-    radix_sort(v2, 3);
-    for (auto i : v2) {
-        std::cout << i << " ";
-    }
+    // std::vector<int> v2 = {329, 457, 657, 839, 436, 720, 355};
+    // radix_sort(v2, 3);
+    // for (auto i : v2) {
+    //     std::cout << i << " ";
+    // }
+
+    // std::vector<double> v2 = {0.78, 0.17, 0.39, 0.26, 0.72, 0.94, 0.21, 0.12, 0.23, 0.68};
+    // std::list<double> l = bucket_sort(v2);
+    // for (auto i : l) {
+    //     std::cout << i << " ";
+    // }
+    // std::cout << std::endl;
+
+
+    // std::pair<double, double> p = maximum_and_minimum<double>(v2);
+    // std::cout << p.first << " " << p.second << std::endl;
 
     // std::vector<std::vector<int>> C = {{1, 2},
     //                                     {3, 4}};
