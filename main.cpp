@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <list>
+#include <stack>
 #include <forward_list>
 #include <climits>
 #include <cmath>
@@ -346,6 +347,25 @@ int randomized_select(std::vector<int> &v, int p, int r, int i) {
     }
 }
 
+void transpose_matrix(std::vector<std::vector<int>> &A) {
+    for (int i = 0; i < A.size(); ++i) {
+        for (int j = i + 1; j < A[0].size(); ++j) {
+            std::swap(A[i][j], A[j][i]);
+        }
+    }
+}
+
+// A must be a square matrix
+void transpose_recursive(std::vector<std::vector<int>> &A, int index = 0){
+    if (index == A.size() - 1) {
+        return;
+    }
+    for (int i = index + 1; i < A[0].size(); ++i) {
+        std::swap(A[index][i], A[i][index]);
+    }
+    transpose_recursive(A, index + 1);
+}
+
 std::vector<std::vector<int>> matrix_multiply(const std::vector<std::vector<int>> &A, const std::vector<std::vector<int>> &B) {
     std::vector<std::vector<int>> C(A.size(), std::vector<int>(B[0].size()));
     for (int i = 0; i < A.size(); ++i) {
@@ -432,8 +452,147 @@ void print_matrix(const std::vector<std::vector<int>> &A) {
     }
 }
 
+struct Node
+{
+    Node(int key) : key(key) {}
+    int key;
+    Node *parent = nullptr;
+    Node *left = nullptr;
+    Node *right = nullptr;
+};
+
+void inorder_tree_walk(Node *x) {
+    if (x != nullptr) {
+        inorder_tree_walk(x->left);
+        std::cout << x->key << " ";
+        inorder_tree_walk(x->right);
+    }
+}
+
+Node *tree_search(Node *x, int key) {
+    if (x == nullptr or x->key == key) {
+        return x;
+    }
+    if (key < x->key) {
+        return tree_search(x->left, key);
+    } else {
+        return tree_search(x->right, key);
+    }
+}
+
+Node *iterative_tree_search(Node *x, int key) {
+    while (x != nullptr and x->key != key) {
+        if (key < x->key) {
+            x = x->left;
+        } else {
+            x = x->right;
+        }
+    }
+    return x;
+}
+
+Node *tree_minimum(Node *x) {
+    while (x->left != nullptr) {
+        x = x->left;
+    }
+    return x;
+}
+
+Node *tree_maximum(Node *x) {
+    while (x->right != nullptr) {
+        x = x->right;
+    }
+    return x;
+}
+
+Node *tree_successor(Node *x) {
+    if (x->right != nullptr) {
+        return tree_minimum(x->right);
+    }
+    Node *y = x->parent;
+    while (y != nullptr and x == y->right) {
+        x = y;
+        y = y->parent;
+    }
+    return y;
+}
+
+Node *tree_predecessor(Node *x) {
+    if (x->left != nullptr) {
+        return tree_maximum(x->left);
+    }
+    Node *y = x->parent;
+    while (y != nullptr and x == y->left) {
+        x = y;
+        y = y->parent;
+    }
+    return y;
+}
+
+void tree_insert(Node *root, Node *z) {
+    Node *x = root;
+    Node *y = nullptr;
+    while (x != nullptr) {
+        y = x;
+        if (z->key < x->key) {
+            x = x->left;
+        } else {
+            x = x->right;
+        }
+    }
+    z->parent = y;
+    if (y == nullptr) {
+        root = z;
+    } else if (z->key < y->key) {
+        y->left = z;
+    } else {
+        y->right = z;
+    }
+}
+
+void print_tree(Node *root, int level = 0) {
+    if (root != nullptr) {
+        print_tree(root->right, level + 1);
+        for (int i = 0; i < level; ++i) {
+            std::cout << "    ";
+        }
+        std::cout << root->key << std::endl;
+        print_tree(root->left, level + 1);
+    }
+}
+
+class QueueByStacks
+{
+public:
+    void enqueue(int x) {
+        s1.push(x);
+    }
+
+    int dequeue() {
+        if (s2.empty()) {
+            if (s1.empty()) {
+                std::cerr << "Error: queue underflow." << std::endl;
+                exit(1);
+            }
+            while (!s1.empty()) {
+                s2.push(s1.top());
+                s1.pop();
+            }
+        }
+        int x = s2.top();
+        s2.pop();
+        return x;
+    }
+
+
+private:
+    std::stack<int> s1;
+    std::stack<int> s2;
+};
+
+
 int main() {
-    std::vector<int> v = {5, 2, 4, 6, 1, 3};
+    // std::vector<int> v = {5, 2, 4, 6, 1, 3};
     // insertion_sort(v);
     // merge_sort(v, 0, v.size() - 1);
     // bubble_sort(v);
@@ -488,6 +647,9 @@ int main() {
     //                                    {5, 6},
     //                                    {7, 8}};
 
+    // transpose_matrix(A);
+    // print_matrix(A);
+
     // std::vector<std::vector<int>> F = matrix_multiply_recursive(C, D);
     // print_matrix(F);
 
@@ -496,6 +658,49 @@ int main() {
 
     // std::vector<std::vector<int>> I = matrix_multiply_recursive(G, H);
     // print_matrix(I);
+
+    // Node *root = new Node(12);
+    // Node *n1 = new Node(5);
+    // Node *n2 = new Node(18);
+    // Node *n3 = new Node(2);
+    // Node *n4 = new Node(9);
+    // Node *n5 = new Node(15);
+    // Node *n6 = new Node(19);
+    // Node *n7 = new Node(17);
+
+    // root->left = n1;
+    // root->right = n2;
+    // n1->parent = root;
+    // n2->parent = root;
+    // n1->left = n3;
+    // n1->right = n4;
+    // n3->parent = n1;
+    // n4->parent = n1;
+    // n2->left = n5;
+    // n2->right = n6;
+    // n5->parent = n2;
+    // n6->parent = n2;
+    // n5->right = n7;
+    // n7->parent = n5;
+
+    // print_tree(root);
+
+    // Node *x = new Node(13);
+    // tree_insert(root, x);
+    // print_tree(root);
+
+    QueueByStacks q;
+    q.enqueue(1);
+    q.enqueue(2);
+    q.enqueue(3);
+    std::cout << q.dequeue() << std::endl;
+    q.enqueue(4);
+    q.enqueue(5);
+    std::cout << q.dequeue() << std::endl;
+    std::cout << q.dequeue() << std::endl;
+    std::cout << q.dequeue() << std::endl;
+    std::cout << q.dequeue() << std::endl;
+    std::cout << q.dequeue() << std::endl;
 
     return 0;
 }
