@@ -6,6 +6,13 @@
 #include <climits>
 #include <cmath>
 
+const std::string red("\033[0;31m");
+const std::string green("\033[1;32m");
+const std::string yellow("\033[1;33m");
+const std::string cyan("\033[0;36m");
+const std::string magenta("\033[0;35m");
+const std::string reset("\033[0m");
+
 void insertion_sort(std::vector<int> &v) {
     for (int i = 1; i < v.size(); ++i) {
         int key = v[i];
@@ -452,16 +459,20 @@ void print_matrix(const std::vector<std::vector<int>> &A) {
     }
 }
 
+enum Color {WHITE, GRAY, BLACK, RED};
+template<typename T>
 struct Node
 {
-    Node(int key) : key(key) {}
-    int key;
+    Node(T key, Color color = RED) : key(key), color(color) {}
+    T key;
     Node *parent = nullptr;
     Node *left = nullptr;
     Node *right = nullptr;
+    Color color;
 };
 
-void inorder_tree_walk(Node *x) {
+template<typename T>
+void inorder_tree_walk(Node<T> *x) {
     if (x != nullptr) {
         inorder_tree_walk(x->left);
         std::cout << x->key << " ";
@@ -469,7 +480,8 @@ void inorder_tree_walk(Node *x) {
     }
 }
 
-Node *tree_search(Node *x, int key) {
+template<typename T>
+Node<T> *tree_search(Node<T> *x, T key) {
     if (x == nullptr or x->key == key) {
         return x;
     }
@@ -480,7 +492,8 @@ Node *tree_search(Node *x, int key) {
     }
 }
 
-Node *iterative_tree_search(Node *x, int key) {
+template<typename T>
+Node<T> *iterative_tree_search(Node<T> *x, T key) {
     while (x != nullptr and x->key != key) {
         if (key < x->key) {
             x = x->left;
@@ -491,25 +504,28 @@ Node *iterative_tree_search(Node *x, int key) {
     return x;
 }
 
-Node *tree_minimum(Node *x) {
+template<typename T>
+Node<T> *tree_minimum(Node<T> *x) {
     while (x->left != nullptr) {
         x = x->left;
     }
     return x;
 }
 
-Node *tree_maximum(Node *x) {
+template<typename T>
+Node<T> *tree_maximum(Node<T> *x) {
     while (x->right != nullptr) {
         x = x->right;
     }
     return x;
 }
 
-Node *tree_successor(Node *x) {
+template<typename T>
+Node<T> *tree_successor(Node<T> *x) {
     if (x->right != nullptr) {
         return tree_minimum(x->right);
     }
-    Node *y = x->parent;
+    Node<T> *y = x->parent;
     while (y != nullptr and x == y->right) {
         x = y;
         y = y->parent;
@@ -517,11 +533,12 @@ Node *tree_successor(Node *x) {
     return y;
 }
 
-Node *tree_predecessor(Node *x) {
+template<typename T>
+Node<T> *tree_predecessor(Node<T> *x) {
     if (x->left != nullptr) {
         return tree_maximum(x->left);
     }
-    Node *y = x->parent;
+    Node<T> *y = x->parent;
     while (y != nullptr and x == y->left) {
         x = y;
         y = y->parent;
@@ -529,9 +546,10 @@ Node *tree_predecessor(Node *x) {
     return y;
 }
 
-void tree_insert(Node *root, Node *z) {
-    Node *x = root;
-    Node *y = nullptr;
+template<typename T>
+void tree_insert(Node<T> *&root, Node<T> *z) {
+    Node<T> *x = root;
+    Node<T> *y = nullptr;
     while (x != nullptr) {
         y = x;
         if (z->key < x->key) {
@@ -550,13 +568,128 @@ void tree_insert(Node *root, Node *z) {
     }
 }
 
-void print_tree(Node *root, int level = 0) {
+template<typename T>
+void left_rotate(Node<T> *&root, Node<T> *x) {
+    Node<T> *y = x->right;
+    x->right = y->left;
+    if (y->left != nullptr) {
+        y->left->parent = x;
+    }
+    y->parent = x->parent;
+    if (x->parent == nullptr) {
+        root = y;
+    } else if (x == x->parent->left) {
+        x->parent->left = y;
+    } else {
+        x->parent->right = y;
+    }
+    y->left = x;
+    x->parent = y;
+}
+
+template<typename T>
+void right_rotate(Node<T> *&root, Node<T> *y) {
+    Node<T> *x = y->left;
+    y->left = x->right;
+    if (x->right != nullptr) {
+        x->right->parent = y;
+    }
+    x->parent = y->parent;
+    if (y->parent == nullptr) {
+        root = x;
+    } else if (y == y->parent->left) {
+        y->parent->left = x;
+    } else {
+        y->parent->right = x;
+    }
+    x->right = y;
+    y->parent = x;
+}
+
+template<typename T>
+void rb_insert_fixup(Node<T> *&root, Node<T> *z) {
+    while (z->parent && z->parent->color == RED) {
+        if (z->parent == z->parent->parent->left) { // is z's parent a left child?
+            Node<T> *y = z->parent->parent->right;  // y is z's uncle
+            if (y->color == RED) {                  // case 1: z's parent and uncle are both red
+                z->parent->color = BLACK;
+                y->color = BLACK;
+                z->parent->parent->color = RED;
+                z = z->parent->parent;
+            } else {                                // z's uncle is black
+                if (z == z->parent->right) {        // case 2: z's uncle is black and z is a right child
+                    z = z->parent;
+                    left_rotate(root, z);
+                }
+                z->parent->color = BLACK;           // case 3: z's uncle is black and z is a left child
+                z->parent->parent->color = RED;
+                right_rotate(root, z->parent->parent);
+            }
+        } else {
+            Node<T> *y = z->parent->parent->left;
+            Color y_color = BLACK;                  // leaf nodes are black
+            if (y != nullptr) {                     // y might be nullptr
+                y_color = y->color;
+            }
+            if (y_color == RED) {                   // case 1: z's parent and uncle are both red
+                z->parent->color = BLACK;
+                y->color = BLACK;
+                z->parent->parent->color = RED;
+                z = z->parent->parent;
+            } else {                                // z's uncle is black
+                if (z == z->parent->left) {         // case 2: z's uncle is black and z is a left child
+                    z = z->parent;
+                    right_rotate(root, z);
+                }                                   // case 3: z's uncle is black and z is a right child
+                z->parent->color = BLACK;
+                z->parent->parent->color = RED;
+                left_rotate(root, z->parent->parent);
+            }
+        }
+    }
+    root->color = BLACK;
+}
+
+
+template<typename T>
+void rb_insert(Node<T> *&root, Node<T> *z) {
+    Node<T> *y = nullptr;
+    Node<T> *x = root;
+    while (x != nullptr) {
+        y = x;
+        if (z->key < x->key) {
+            x = x->left;
+        } else {
+            x = x->right;
+        }
+    }
+    z->parent = y;
+    if (y == nullptr) {
+        root = z;
+    } else if (z->key < y->key) {
+        y->left = z;
+    } else {
+        y->right = z;
+    }
+    z->left = nullptr;
+    z->right = nullptr;
+    z->color = RED;
+    rb_insert_fixup(root, z);
+}
+
+template<typename T>
+void print_tree(Node<T> *root, int level = 0) {
     if (root != nullptr) {
         print_tree(root->right, level + 1);
         for (int i = 0; i < level; ++i) {
             std::cout << "    ";
         }
-        std::cout << root->key << std::endl;
+        if (root->color == RED) {
+            std::cout << red << root->key << reset << std::endl;
+        } else {
+            std::cout << root->key << std::endl;
+        }
+
         print_tree(root->left, level + 1);
     }
 }
@@ -689,18 +822,30 @@ int main() {
     // tree_insert(root, x);
     // print_tree(root);
 
-    QueueByStacks q;
-    q.enqueue(1);
-    q.enqueue(2);
-    q.enqueue(3);
-    std::cout << q.dequeue() << std::endl;
-    q.enqueue(4);
-    q.enqueue(5);
-    std::cout << q.dequeue() << std::endl;
-    std::cout << q.dequeue() << std::endl;
-    std::cout << q.dequeue() << std::endl;
-    std::cout << q.dequeue() << std::endl;
-    std::cout << q.dequeue() << std::endl;
+    // QueueByStacks q;
+    // q.enqueue(1);
+    // q.enqueue(2);
+    // q.enqueue(3);
+    // std::cout << q.dequeue() << std::endl;
+    // q.enqueue(4);
+    // q.enqueue(5);
+    // std::cout << q.dequeue() << std::endl;
+    // std::cout << q.dequeue() << std::endl;
+    // std::cout << q.dequeue() << std::endl;
+    // std::cout << q.dequeue() << std::endl;
+    // std::cout << q.dequeue() << std::endl;
+
+    std::vector<std::string> cities{"Dallas", "Orlando", "Philadelphia", "Miami", "Chicago", "Denver", "Boston", "San Francisco"};
+
+    Node<std::string> *root = nullptr;
+
+    for (const std::string city : cities) {
+        Node<std::string> *x = new Node<std::string>(city);
+        rb_insert<std::string>(root, x);
+        // tree_insert<std::string>(root, x);
+        print_tree<std::string>(root);
+        std::cout << "-------------------------- " << std::endl;
+    }
 
     return 0;
 }
