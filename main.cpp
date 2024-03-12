@@ -5,6 +5,7 @@
 #include <forward_list>
 #include <climits>
 #include <cmath>
+#include <algorithm>
 
 const std::string red("\033[0;31m");
 const std::string green("\033[1;32m");
@@ -587,6 +588,47 @@ void left_rotate(Node<T> *&root, Node<T> *x) {
     x->parent = y;
 }
 
+void free_tree(Node<int> *&root) {
+    if (root != nullptr) {
+        free_tree(root->left);
+        free_tree(root->right);
+        delete root;
+        root = nullptr;
+    }
+}
+template<typename T>
+void transplant(Node<T> *&root, Node<T> *u, Node<T> *v) {  // replace u with v
+    if (u->parent == nullptr) {  // u is the root
+        root = v;
+    } else if (u == u->parent->left) {      // u is a left child
+        u->parent->left = v;
+    } else {                                // u is a right child
+        u->parent->right = v;
+    }
+    if (v != nullptr) {
+        v->parent = u->parent;
+    }
+}
+
+template<typename T>
+void tree_delete(Node<T> *&root, Node<T> *z) {
+    if (z->left == nullptr) {
+        transplant(root, z, z->right);
+    } else if (z->right == nullptr) {
+        transplant(root, z, z->left);
+    } else {
+        Node<T> *y = tree_minimum(z->right);
+        if (y->parent != z) {
+            transplant(root, y, y->right);
+            y->right = z->right;
+            y->right->parent = y;
+        }
+        transplant(root, z, y);
+        y->left = z->left;
+        y->left->parent = y;
+    }
+}
+
 template<typename T>
 void right_rotate(Node<T> *&root, Node<T> *y) {
     Node<T> *x = y->left;
@@ -723,6 +765,28 @@ private:
     std::stack<int> s2;
 };
 
+int edit_distance(std::string &x, std::string &y) {
+    int m = x.size();
+    int n = y.size();
+    std::vector<std::vector<int>> dp(m + 1, std::vector<int>(n + 1));
+    for (int i = 0; i <= m; ++i) {
+        dp[i][0] = i;
+    }
+    for (int j = 0; j <= n; ++j) {
+        dp[0][j] = j;
+    }
+    for (int i = 1; i <= m; ++i) {
+        for (int j = 1; j <= n; ++j) {
+            if (x[i - 1] == y[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1];
+            } else {
+                dp[i][j] = std::min({dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + 1});
+            }
+        }
+    }
+    return dp[m][n];
+
+}
 
 int main() {
     // std::vector<int> v = {5, 2, 4, 6, 1, 3};
@@ -792,35 +856,38 @@ int main() {
     // std::vector<std::vector<int>> I = matrix_multiply_recursive(G, H);
     // print_matrix(I);
 
-    // Node *root = new Node(12);
-    // Node *n1 = new Node(5);
-    // Node *n2 = new Node(18);
-    // Node *n3 = new Node(2);
-    // Node *n4 = new Node(9);
-    // Node *n5 = new Node(15);
-    // Node *n6 = new Node(19);
-    // Node *n7 = new Node(17);
+    Node<int> *root = new Node(12);
+    Node<int> *n1 = new Node(5);
+    Node<int> *n2 = new Node(18);
+    Node<int> *n3 = new Node(2);
+    Node<int> *n4 = new Node(9);
+    Node<int> *n5 = new Node(15);
+    Node<int> *n6 = new Node(19);
+    Node<int> *n7 = new Node(17);
 
-    // root->left = n1;
-    // root->right = n2;
-    // n1->parent = root;
-    // n2->parent = root;
-    // n1->left = n3;
-    // n1->right = n4;
-    // n3->parent = n1;
-    // n4->parent = n1;
-    // n2->left = n5;
-    // n2->right = n6;
-    // n5->parent = n2;
-    // n6->parent = n2;
-    // n5->right = n7;
-    // n7->parent = n5;
+    tree_insert<int>(root, n1);
+    tree_insert<int>(root, n2);
+    tree_insert<int>(root, n3);
+    tree_insert<int>(root, n4);
+    tree_insert<int>(root, n5);
+    tree_insert<int>(root, n6);
+    tree_insert<int>(root, n7);
+    
+    print_tree(root);
+    std::cout << "-------------------------- " << std::endl;
 
-    // print_tree(root);
-
-    // Node *x = new Node(13);
-    // tree_insert(root, x);
-    // print_tree(root);
+    Node<int> *x = new Node(13);
+    tree_insert<int>(root, x);
+    print_tree(root);
+    std::cout << "-------------------------- " << std::endl;
+    tree_delete<int>(root, n1);
+    print_tree(root);
+    std::cout << "-------------------------- " << std::endl;
+    tree_delete<int>(root, n2);
+    print_tree(root);
+    std::cout << "-------------------------- " << std::endl;
+    free_tree(root);
+    print_tree(root);
 
     // QueueByStacks q;
     // q.enqueue(1);
@@ -835,17 +902,21 @@ int main() {
     // std::cout << q.dequeue() << std::endl;
     // std::cout << q.dequeue() << std::endl;
 
-    std::vector<std::string> cities{"Dallas", "Orlando", "Philadelphia", "Miami", "Chicago", "Denver", "Boston", "San Francisco"};
+    // std::vector<std::string> cities{"Dallas", "Orlando", "Philadelphia", "Miami", "Chicago", "Denver", "Boston", "San Francisco"};
 
-    Node<std::string> *root = nullptr;
+    // Node<std::string> *root = nullptr;
 
-    for (const std::string city : cities) {
-        Node<std::string> *x = new Node<std::string>(city);
-        rb_insert<std::string>(root, x);
-        // tree_insert<std::string>(root, x);
-        print_tree<std::string>(root);
-        std::cout << "-------------------------- " << std::endl;
-    }
+    // for (const std::string city : cities) {
+    //     Node<std::string> *x = new Node<std::string>(city);
+    //     rb_insert<std::string>(root, x);
+    //     // tree_insert<std::string>(root, x);
+    //     print_tree<std::string>(root);
+    //     std::cout << "-------------------------- " << std::endl;
+    // }
+
+    // std::string x = "kitten";
+    // std::string y = "sitting";
+    // std::cout << edit_distance(x, y) << std::endl;
 
     return 0;
 }
