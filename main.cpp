@@ -798,6 +798,151 @@ int edit_distance(std::string &x, std::string &y) {
 
 }
 
+
+const std::vector<int> price = {0, 1, 5, 8, 9, 10, 17, 17, 20, 24, 30};
+
+// recursive top-down implementation, no dynamic programming
+int cut_rod(const std::vector<int> &p, int n) {
+    if (n == 0) {
+        return 0;
+    }
+    int q = INT_MIN;
+    for (int i = 1; i <= n; ++i) {
+        q = std::max(q, p[i] + cut_rod(p, n - i));
+    }
+    return q;
+}
+
+int memoried_cut_rod_aux(const std::vector<int> &p, int n, std::vector<int> &r) {
+    if (r[n] >= 0) {
+        return r[n];
+    }
+    int q;
+    if (n == 0) {
+        q = 0;
+    } else {
+        q = INT_MIN;
+        for (int i = 1; i <= n; ++i) {
+            q = std::max(q, p[i] + memoried_cut_rod_aux(p, n - i, r));
+        }
+    }
+    r[n] = q;
+    return q;
+}
+
+int memoried_cut_rod(const std::vector<int> &p, int n) {
+    std::vector<int> r(n + 1, INT_MIN);
+    return memoried_cut_rod_aux(p, n, r);
+}
+
+int buttom_up_cut_rod(const std::vector<int> &p, int n) {
+    std::vector<int> r(n + 1);
+    r[0] = 0;
+    for (int j = 1; j <= n; ++j) {
+        int q = INT_MIN;
+        for (int i = 1; i <= j; ++i) {
+            q = std::max(q, p[i] + r[j - i]);
+        }
+        r[j] = q;
+    }
+    return r[n];
+}
+
+std::pair<std::vector<int>, std::vector<int>> extended_buttom_up_cut_rod(const std::vector<int> &p, int n) {
+    std::vector<int> r(n + 1);  // the optimal revenue of a rod of length i
+    std::vector<int> s(n + 1);  // the optimal size of the first piece to cut off
+    r[0] = 0;
+    for (int j = 1; j <= n; ++j) {
+        int q = INT_MIN;
+        for (int i = 1; i <= j; ++i) {
+            if (q < p[i] + r[j - i]) {
+                q = p[i] + r[j - i];
+                s[j] = i;
+            }
+        }
+        r[j] = q;
+    }
+    return std::make_pair(r, s);
+}
+
+void print_cut_rod_solution(const std::vector<int> &p, int n) {
+    std::pair<std::vector<int>, std::vector<int>> p_s = extended_buttom_up_cut_rod(p, n);
+    std::cout << "cut locations: ";
+    while (n > 0) {
+        std::cout << p_s.second[n] << " ";      // cut location for length n
+        n -= p_s.second[n];                     // length of the reminder of the rod
+    }
+    std::cout << std::endl;
+}
+
+std::pair<std::vector<std::vector<int>>, std::vector<std::vector<char>> >
+lcs_length(const std::string &x, const std::string &y) {
+    int m = x.size();
+    int n = y.size();
+    std::vector<std::vector<int>> c(m + 1, std::vector<int>(n + 1));    // c[i][j] is the length of an LCS of x_i and y_j
+    std::vector<std::vector<char>> b(m + 1, std::vector<char>(n + 1));  // b[i][j] is the direction to c[i][j]
+    for (int i = 1; i <= m; ++i) {
+        c[i][0] = 0;
+    }
+    for (int j = 0; j <= n; ++j) {
+        c[0][j] = 0;
+    }
+    for (int i = 1; i <= m; ++i) {
+        for (int j = 1; j <= n; ++j) {
+            // here we use 1-based index, but the string index is 0-based, so we need to subtract 1
+            if (x[i - 1] == y[j - 1]) {
+                c[i][j] = c[i - 1][j - 1] + 1;
+                b[i][j] = 'd';  // diagonal
+            } else if (c[i - 1][j] >= c[i][j - 1]) {
+                c[i][j] = c[i - 1][j];
+                b[i][j] = 'u';  // up
+            } else {
+                c[i][j] = c[i][j - 1];
+                b[i][j] = 'l';  // left
+            }
+        }
+    }
+    return std::make_pair(c, b);
+}
+
+void print_b(const std::vector<std::vector<char>> &b, const std::string &x, const std::string &y) {
+
+    std::cout << " ";
+    for (int i = 0; i < y.size(); ++i) {
+        std::cout << y[i];
+    }
+    std::cout << std::endl;
+
+    for (int i = 1; i < b.size(); ++i) {
+        std::cout << x[i - 1];
+        for (int j = 1; j < b[0].size(); ++j) {
+            char c = b[i][j];
+            if (c == 'd') {
+                std::cout << "↖";
+            } else if (c == 'u') {
+                std::cout << "↑";
+            } else {
+                std::cout << "←";
+            }
+        }
+        std::cout << std::endl;
+    }
+}
+
+void print_lcs(const std::vector<std::vector<char>> &b, const std::string &x, int i, int j) {
+    if (i == 0 or j == 0) {
+        return;
+    }
+    if (b[i][j] == 'd') {
+        print_lcs(b, x, i - 1, j - 1);
+        std::cout << x[i - 1];          // only print when it's a diagonal
+    } else if (b[i][j] == 'u') {
+        print_lcs(b, x, i - 1, j);
+    } else {
+        print_lcs(b, x, i, j - 1);
+    }
+}
+
 int main() {
     // std::vector<int> v = {5, 2, 4, 6, 1, 3};
     // insertion_sort(v);
@@ -910,21 +1055,36 @@ int main() {
     // std::cout << q.dequeue() << std::endl;
     // std::cout << q.dequeue() << std::endl;
 
-    std::vector<std::string> cities{"Dallas", "Orlando", "Philadelphia", "Miami", "Chicago", "Denver", "Boston", "San Francisco"};
+    // std::vector<std::string> cities{"Dallas", "Orlando", "Philadelphia", "Miami", "Chicago", "Denver", "Boston", "San Francisco"};
 
-    RedBlackTree<std::string> rb_tree;
+    // RedBlackTree<std::string> rb_tree;
 
-    for (const std::string city : cities) {
-        Node<std::string> *x = new Node<std::string>(city);
-        rb_tree.rb_insert(x);
-        // rb_tree.tree_insert(x);
-        rb_tree.print_tree();
-        std::cout << "-------------------------- " << std::endl;
-    }
+    // for (const std::string city : cities) {
+    //     Node<std::string> *x = new Node<std::string>(city);
+    //     rb_tree.rb_insert(x);
+    //     // rb_tree.tree_insert(x);
+    //     rb_tree.print_tree();
+    //     std::cout << "-------------------------- " << std::endl;
+    // }
 
     // std::string x = "kitten";
     // std::string y = "sitting";
     // std::cout << edit_distance(x, y) << std::endl;
+
+    // for (int i = 0; i <= 10; ++i) {
+    //     std::cout << cut_rod(price, i) << std::endl;
+    //     std::cout << memoried_cut_rod(price, i) << std::endl;
+    //     std::cout << buttom_up_cut_rod(price, i) << std::endl;
+    //     print_cut_rod_solution(price, i);
+    //     std::cout << "-------------------------- " << std::endl;
+    // }
+
+    std::string x = "ABCBDAB";
+    std::string y = "BDCABA";
+    auto p = lcs_length(x, y);
+    print_b(p.second, x, y);
+    print_lcs(p.second, x, x.size(), y.size());
+    
 
     return 0;
 }
