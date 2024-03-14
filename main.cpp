@@ -1,11 +1,11 @@
-#include <iostream>
-#include <vector>
-#include <list>
-#include <stack>
-#include <forward_list>
+#include <algorithm>
 #include <climits>
 #include <cmath>
-#include <algorithm>
+#include <forward_list>
+#include <iostream>
+#include <list>
+#include <stack>
+#include <vector>
 
 const std::string red("\033[0;31m");
 const std::string green("\033[1;32m");
