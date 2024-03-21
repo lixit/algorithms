@@ -2,7 +2,9 @@
 #include <climits>
 #include <cmath>
 #include <forward_list>
+#include <format>
 #include <iostream>
+#include <iomanip>
 #include <list>
 #include <stack>
 #include <vector>
@@ -943,6 +945,121 @@ void print_lcs(const std::vector<std::vector<char>> &b, const std::string &x, in
     }
 }
 
+
+typedef std::vector<std::pair<int, int>> ParentsIdx;
+
+// return all possible solution in (0, n - 1) in dp, and path to the solution in dir
+auto rna_secondary_structure(const std::string &s) {
+    int n = s.size();
+    std::vector<std::vector<int>> dp(n, std::vector<int>(n));
+    std::vector<std::vector<ParentsIdx>> dir(n, std::vector<ParentsIdx>(n));
+
+    // max distance is n - 1, so k < n
+    for (int k = 5; k < n; ++k) {  // k = j - i, k is the distance between i to j
+        // max index for i is n - 1 - k, so i < n - k
+        for (int i = 0; i < n - k; ++i) {
+            int j = i + k;              // j is the right index
+            dp[i][j] = dp[i][j - 1];    // if j is not involved in a pair
+            dir[i][j].push_back({i, j - 1});        // my parent is to the left
+            for (int t = i; t < j - 4; ++t) {  // if j pairs with t for some t < j - 4
+                char s_t = s[t];
+                char s_j = s[j];
+                if ((s_t == 'A' and s_j == 'U') or (s_t == 'U' and s_j == 'A') or (s_t == 'C' and s_j == 'G') or (s_t == 'G' and s_j == 'C')) {
+                    int val = dp[i][t - 1] + dp[t + 1][j - 1] + 1;
+                    if (val > dp[i][j]) {      // if the number of pairs is better than if j is not involved
+                        dp[i][j] = val;
+                        dir[i][j].clear();
+
+                        dir[i][j].push_back({i, t - 1});            // t - 1 might be -1, which means t = 0, left half is empty
+                        dir[i][j].push_back({t + 1, j - 1});
+                    }
+                }
+            }
+        }
+    }
+
+    return std::make_pair(dp, dir);
+}
+
+// print parent structure and return all pairs
+std::vector<std::pair<int, int>> print_rna_secondary_structure(const std::vector<std::vector<int>> &dp,
+                                                               const std::vector<std::vector<ParentsIdx>> &dir,
+                                                               int i, int j) {
+
+    std::deque<std::pair<int, int>> q;                  // use deque in a iterative BFS way
+    std::vector<std::pair<int, int>> pairs;
+    q.push_back({i, j});
+
+    while (!q.empty()) {
+        auto sz = q.size();
+        for (int i = 0; i < sz; ++i) {
+            auto p = q.front();
+            q.pop_front();
+            // show index and the number of pairs
+            std::cout << "(" << p.first << ", " << p.second << "):" << dp[p.first][p.second] << " ";
+
+            if (dir[p.first][p.second].size() == 1) {                                      // if only 1 parent, then j is not paired with any other                                                 
+                std::cout << "j: " << p.second << " is not involved in a pair";
+            } else if (dir[p.first][p.second].size() == 2) {                               // if 2 parents, then j is paired with t
+                int t = dir[p.first][p.second][0].second + 1;
+                std::cout << std::format("({}, {})", t, p.second) << " is a pair";
+                pairs.push_back({t, p.second});
+            }
+
+            for (auto &pp : dir[p.first][p.second]) {
+                if (pp.second >= 0) {       // this value might be -1
+                    q.push_back(pp);
+                }
+            }
+        }
+        std::cout << std::endl;
+    }
+
+    // print pairs in a readable way
+    std::sort(pairs.begin(), pairs.end());
+    std::cout << "All pairs (size:" << pairs.size() << "):" << std::endl;
+    for (int i = 0; i < pairs.size(); ++i) {
+        std::cout << std::setw(3) << pairs[i].first;
+    }
+    std::cout << std::endl;
+    for (int i = 0; i < pairs.size(); ++i) {
+        std::cout << std::setw(3) << pairs[i].second;
+    }
+    std::cout << std::endl;
+
+    return pairs;
+}
+
+// print maxium pairs in all possible (0, n - 1)
+// red color indicate corresponding index (i, j) is a pair, but don't confuse with the number = dp[i, j], which is the number of maximum pairs
+void print_rna_all_solutions(const std::string &s, const std::vector<std::vector<int>> &dp, const std::vector<std::pair<int, int>> &pairs) {
+    int n = dp.size();
+
+    // print the index
+    for (int i = 0; i < n; ++i) {
+        std::cout << std::setw(3) << i;
+    }
+    std::cout << std::endl;
+
+    // print the string
+    for (auto &c : s) {
+        std::cout << std::setw(3) << c;
+    }
+    std::cout << std::endl;
+    std::cout << "--------------------------" << std::endl;
+
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            if (std::find(pairs.begin(), pairs.end(), std::make_pair(i, j)) != pairs.end()) {
+                std::cout << red << std::setw(3) << dp[i][j] << reset;
+            } else {
+                std::cout << std::setw(3) << dp[i][j];
+            }
+        }
+        std::cout << std::endl;
+    }
+}
+
 int main() {
     // std::vector<int> v = {5, 2, 4, 6, 1, 3};
     // insertion_sort(v);
@@ -1079,12 +1196,19 @@ int main() {
     //     std::cout << "-------------------------- " << std::endl;
     // }
 
-    std::string x = "ABCBDAB";
-    std::string y = "BDCABA";
-    auto p = lcs_length(x, y);
-    print_b(p.second, x, y);
-    print_lcs(p.second, x, x.size(), y.size());
+    // std::string x = "ABCBDAB";
+    // std::string y = "BDCABA";
+    // auto p = lcs_length(x, y);
+    // print_b(p.second, x, y);
+    // print_lcs(p.second, x, x.size(), y.size());
+
+    std::string rna_sequence = "AUGGCUACCGGUCGAUUGAGCGCCAAUGUAAUCAUU";
     
+    auto dp_dir = rna_secondary_structure(rna_sequence);
+
+    auto pairs = print_rna_secondary_structure(dp_dir.first, dp_dir.second, 0, rna_sequence.size() - 1);
+
+    print_rna_all_solutions(rna_sequence, dp_dir.first, pairs);
 
     return 0;
 }
