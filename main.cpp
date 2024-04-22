@@ -8,6 +8,7 @@
 #include <list>
 #include <stack>
 #include <vector>
+#include <queue>
 
 const std::string red("\033[0;31m");
 const std::string green("\033[1;32m");
@@ -1060,6 +1061,149 @@ void print_rna_all_solutions(const std::string &s, const std::vector<std::vector
     }
 }
 
+class Graph {
+public:
+    Graph(int V) : 
+        V(V), adj(V), color(V, WHITE), d(V, INT_MAX), f(V), pi(V, -1) {}
+
+    void add_edge(int u, int v) {
+        adj[u].push_back(v);
+    }
+
+    void add_edge(const std::vector<std::pair<int, int>> &edges) {
+        for (auto &e : edges) {
+            add_edge(e.first, e.second);
+        }
+    }
+
+    void print_graph() {
+        for (int i = 0; i < V; ++i) {
+            std::cout << i << ": ";
+            for (auto &j : adj[i]) {
+                std::cout << j << " ";
+            }
+            std::cout << std::endl;
+        }
+    }
+
+    void bfs(int s) {
+        for (int i = 0; i < V; ++i) {
+            color[i] = WHITE;
+            d[i] = INT_MAX;
+            pi[i] = -1;
+        }
+
+        color[s] = GRAY;
+        d[s] = 0;
+        pi[s] = -1;
+
+        std::queue<int> q;
+        
+        q.push(s);
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+            for (auto &v : adj[u]) {
+                if (color[v] == WHITE) {
+                    color[v] = GRAY;
+                    d[v] = d[u] + 1;
+                    pi[v] = u;
+                    q.push(v);
+                }
+            }
+            color[u] = BLACK;
+        }
+    }
+
+    void dfs_iterative(int s) {
+        for (int i = 0; i < V; ++i) {
+            color[i] = WHITE;
+            d[i] = INT_MAX;
+            pi[i] = -1;
+        }
+
+        color[s] = GRAY;
+        d[s] = 0;
+        pi[s] = -1;
+
+        // the only thing changed is from queue to stack
+        std::stack<int> q;
+        
+        q.push(s);
+        while (!q.empty()) {
+            int u = q.top();
+            q.pop();
+            for (auto &v : adj[u]) {
+                if (color[v] == WHITE) {
+                    color[v] = GRAY;
+                    d[v] = d[u] + 1;
+                    pi[v] = u;
+                    q.push(v);
+                }
+            }
+            color[u] = BLACK;
+        }
+    }
+
+    void dfs_visit(int u, int &time) {
+        color[u] = GRAY;
+        d[u] = ++time;
+        for (auto &v : adj[u]) {
+            if (color[v] == WHITE) {
+                pi[v] = u;
+                dfs_visit(v, time);
+            }
+        }
+        color[u] = BLACK;
+        f[u] = ++time;
+    }
+
+    void dfs() {
+        for (int i = 0; i < V; ++i) {
+            color[i] = WHITE;
+            pi[i] = -1;
+        }
+        int time = 0;
+        for (int i = 0; i < V; ++i) {
+            if (color[i] == WHITE) {
+                dfs_visit(i, time);
+            }
+        }
+    }
+
+    // print a path from s to v
+    void print_path_recursive(int s, int v) {
+        if (v == s) {
+            std::cout << s << " ";
+        } else if (pi[v] == -1) {
+            std::cout << "no path from " << s << " to " << v << " exists" << std::endl;
+        } else {
+            print_path_recursive(s, pi[v]);
+            std::cout << v << " ";
+        }
+    }
+
+    void print_path(int s, int v) {
+        print_path_recursive(s, v);
+        std::cout << std::endl;
+    }
+
+private:
+    // size of the vertices
+    int V;
+    // Adjacency list 
+    std::vector<std::vector<int>> adj;
+    // color of each vertice
+    std::vector<Color> color;
+    // distance from the source, or time discovered
+    std::vector<int> d;
+    // time finished discovery
+    std::vector<int> f;
+    // parent of each vertice
+    std::vector<int> pi;
+
+};
+
 int main() {
     // std::vector<int> v = {5, 2, 4, 6, 1, 3};
     // insertion_sort(v);
@@ -1202,13 +1346,25 @@ int main() {
     // print_b(p.second, x, y);
     // print_lcs(p.second, x, x.size(), y.size());
 
-    std::string rna_sequence = "AUGGCUACCGGUCGAUUGAGCGCCAAUGUAAUCAUU";
+    // std::string rna_sequence = "AUGGCUACCGGUCGAUUGAGCGCCAAUGUAAUCAUU";
     
-    auto dp_dir = rna_secondary_structure(rna_sequence);
+    // auto dp_dir = rna_secondary_structure(rna_sequence);
 
-    auto pairs = print_rna_secondary_structure(dp_dir.first, dp_dir.second, 0, rna_sequence.size() - 1);
+    // auto pairs = print_rna_secondary_structure(dp_dir.first, dp_dir.second, 0, rna_sequence.size() - 1);
 
-    print_rna_all_solutions(rna_sequence, dp_dir.first, pairs);
+    // print_rna_all_solutions(rna_sequence, dp_dir.first, pairs);
+
+    Graph g(8);
+    g.add_edge({{0, 1}, {0, 3}, {1, 2}, {1, 4}, {2, 5}, {3, 4}, {4, 5}, {4, 6}, {5, 7}, {6, 7}});
+    g.print_graph();
+
+    g.bfs(0);
+    g.print_path(0, 7);
+
+    g.dfs_iterative(0);
+    g.print_path(0, 7);
+
+    g.dfs();
 
     return 0;
 }
