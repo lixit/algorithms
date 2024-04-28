@@ -9,6 +9,9 @@
 #include <stack>
 #include <vector>
 #include <queue>
+#include <set>
+#include <thread>
+#include <complex>
 
 const std::string red("\033[0;31m");
 const std::string green("\033[1;32m");
@@ -1064,7 +1067,7 @@ void print_rna_all_solutions(const std::string &s, const std::vector<std::vector
 class Graph {
 public:
     Graph(int V) : 
-        V(V), adj(V), color(V, WHITE), d(V, INT_MAX), f(V), pi(V, -1) {}
+        V(V), adj(V), color(V, WHITE), d(V, INT_MAX), f(V), pi(V, -1), weight(V, std::vector<int>(V, 1)) {}
 
     void add_edge(int u, int v) {
         adj[u].push_back(v);
@@ -1183,9 +1186,41 @@ public:
         }
     }
 
+    void print_all_pairs_shortest_path(int i, int j) {
+        if (i == j) {
+            std::cout << i << " ";
+        } else if (PI[i][j] == -1) {
+            std::cout << "no path from " << i << " to " << j << " exists" << std::endl;
+        } else {
+            print_all_pairs_shortest_path(i, PI[i][j]);
+            std::cout << j << " ";
+        }
+    }
+
     void print_path(int s, int v) {
         print_path_recursive(s, v);
         std::cout << std::endl;
+    }
+
+    void initialize_single_source(int s) {
+        for (int i = 0; i < V; ++i) {
+            d[i] = INT_MAX;
+            pi[i] = -1;
+        }
+        d[s] = 0;
+    }
+
+    void relax(int u, int v) {
+        if (d[v] > d[u] + weight[u][v]) {
+            d[v] = d[u] + weight[u][v];
+            pi[v] = u;
+        }
+    }
+
+    void dijkstra(int s) {
+        initialize_single_source(s);
+        std::set<std::pair<int, int>> S;
+        // priority queue
     }
 
 private:
@@ -1202,7 +1237,88 @@ private:
     // parent of each vertice
     std::vector<int> pi;
 
+    std::vector<std::vector<int>> weight;
+
+
+    // for all-pairs shortest paths
+    // adjacency matrix
+    std::vector<std::vector<int>> adj_matrix;
+    // results
+    std::vector<std::vector<int>> D;
+    // predecessor matrix
+    std::vector<std::vector<int>> PI;
+
 };
+
+int p_fib(int n) {
+    if (n <= 1) {
+        return n;
+    } else {
+        int result1, result2;
+        std::thread t1([&result1, n] { result1 = p_fib(n - 1); });
+        std::thread t2([&result2, n] { result2 = p_fib(n - 2); });
+        t1.join();
+        t2.join();
+        return result1 + result2;
+    }
+}
+
+// input is a vector of coefficients of a polynomial
+// output is evaluation of n complex nth roots of unity
+std::vector<std::complex<double>> fft(const std::vector<double> &a) {
+    int n = a.size();
+    if (n == 1) {
+        return {a[0]};
+    }
+    auto w = [](int n, int k) {
+        return std::polar(1.0, -2 * M_PI * k / n);
+    };
+    auto w_n = w(n, 1);
+    auto w_1 = w(n, 0);
+
+    std::vector<double> a_even(n / 2);
+    std::vector<double> a_odd(n / 2);
+    for (int i = 0; i < n / 2; ++i) {
+        a_even[i] = a[2 * i];
+        a_odd[i] = a[2 * i + 1];
+    }
+    std::vector<std::complex<double>> y_even = fft(a_even);
+    std::vector<std::complex<double>> y_odd = fft(a_odd);
+    std::vector<std::complex<double>> y(n);
+    for (int k = 0; k < n / 2; ++k) {
+        y[k] = y_even[k] + w_1 * y_odd[k];
+        y[k + n / 2] = y_even[k] - w_1 * y_odd[k];
+        w_1 *= w_n;
+    }
+    return y;
+}
+
+// An array 𝐴 is wiggly if 𝐴[1] ≤ 𝐴[2] ≥ 𝐴[3] ≤ 𝐴[4] ≥ ⋯ ≤ 𝐴[2𝑛 − 2] ≥ 𝐴[2𝑛 − 1] ≤ 𝐴[2𝑛]
+
+void wiggly_permutation(std::vector<int> &v) {
+
+    // O(nlogn) time complexity
+    // std::sort(v.begin(), v.end());
+    // for (int i = 1; i < v.size() - 1; i += 2) {
+    //     std::swap(v[i], v[i + 1]);
+    // }
+
+    // O(n) time complexity
+    for (int i = 1; i < v.size(); ++i) {
+        if ((i % 2 == 1 and v[i] < v[i - 1]) or (i % 2 == 0 and v[i] > v[i - 1])) {
+            std::swap(v[i], v[i - 1]);
+        }
+    }
+}
+
+void verify_wiggly_permutation(const std::vector<int> &v) {
+    for (int i = 1; i < v.size() - 1; i += 2) {
+        if (v[i] < v[i - 1] or v[i] < v[i + 1]) {
+            std::cerr << "Error: not a wiggly permutation." << std::endl;
+            exit(1);
+        }
+    }
+}
 
 int main() {
     // std::vector<int> v = {5, 2, 4, 6, 1, 3};
@@ -1354,17 +1470,30 @@ int main() {
 
     // print_rna_all_solutions(rna_sequence, dp_dir.first, pairs);
 
-    Graph g(8);
-    g.add_edge({{0, 1}, {0, 3}, {1, 2}, {1, 4}, {2, 5}, {3, 4}, {4, 5}, {4, 6}, {5, 7}, {6, 7}});
-    g.print_graph();
+    // Graph g(8);
+    // g.add_edge({{0, 1}, {0, 3}, {1, 2}, {1, 4}, {2, 5}, {3, 4}, {4, 5}, {4, 6}, {5, 7}, {6, 7}});
+    // g.print_graph();
 
-    g.bfs(0);
-    g.print_path(0, 7);
+    // g.bfs(0);
+    // g.print_path(0, 7);
 
-    g.dfs_iterative(0);
-    g.print_path(0, 7);
+    // g.dfs_iterative(0);
+    // g.print_path(0, 7);
 
-    g.dfs();
+    // g.dfs();
+
+
+    // std::cout << p_fib(15) << std::endl;
+
+    // std::vector<double> a = {1, 2, 3, 4};
+    // std::vector<std::complex<double>> b = fft(a);
+    // for (auto i : b) {
+    //     std::cout << i << " ";
+    // }
+
+    std::vector<int> v = {3, 2, 1, 6, 5, 4};
+    wiggly_permutation(v);
+    verify_wiggly_permutation(v);
 
     return 0;
 }
