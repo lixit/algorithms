@@ -1223,6 +1223,25 @@ public:
         // priority queue
     }
 
+    bool bellman_ford(int s) {
+        initialize_single_source(s);
+        for (int i = 0; i < V - 1; ++i) {
+            for (int u = 0; u < V; ++u) {
+                for (auto &v : adj[u]) {
+                    relax(u, v);
+                }
+            }
+        }
+        for (int u = 0; u < V; ++u) {
+            for (auto &v : adj[u]) {
+                if (d[v] > d[u] + weight[u][v]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
 private:
     // size of the vertices
     int V;
@@ -1263,16 +1282,18 @@ int p_fib(int n) {
     }
 }
 
+// DFT by FFT
 // input is a vector of coefficients of a polynomial
 // output is evaluation of n complex nth roots of unity
 std::vector<std::complex<double>> fft(const std::vector<double> &a) {
-    int n = a.size();
+    const int n = a.size();
     if (n == 1) {
         return {a[0]};
     }
     auto w = [](int n, int k) {
-        return std::polar(1.0, -2 * M_PI * k / n);
+        return std::polar(1.0, 2 * M_PI * k / n);
     };
+    // w_n is principal nth root of unity
     auto w_n = w(n, 1);
     auto w_1 = w(n, 0);
 
@@ -1485,15 +1506,16 @@ int main() {
 
     // std::cout << p_fib(15) << std::endl;
 
-    // std::vector<double> a = {1, 2, 3, 4};
-    // std::vector<std::complex<double>> b = fft(a);
-    // for (auto i : b) {
-    //     std::cout << i << " ";
-    // }
+    std::vector<double> a = {0, 1, 2, 3};
+    std::vector<std::complex<double>> b = fft(a);
+    for (auto i : b) {
+        std::cout << i << " ";
+    }
+    std::cout << std::endl;
 
-    std::vector<int> v = {3, 2, 1, 6, 5, 4};
-    wiggly_permutation(v);
-    verify_wiggly_permutation(v);
+    // std::vector<int> v = {3, 2, 1, 6, 5, 4};
+    // wiggly_permutation(v);
+    // verify_wiggly_permutation(v);
 
     return 0;
 }
