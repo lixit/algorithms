@@ -12,6 +12,7 @@
 #include <set>
 #include <thread>
 #include <complex>
+#include <functional>
 
 const std::string red("\033[0;31m");
 const std::string green("\033[1;32m");
@@ -34,7 +35,9 @@ void insertion_sort(std::vector<int> &v) {
 
 // find max element in v and exchange it with last element in v
 // effectively, sort in increasing order
+// only find max_index and swap once, more efficient
 void selection_sort(std::vector<int> &v) {
+    // here if v.size() is 0, right will be -1
     for (int right = v.size() - 1; right >= 1; --right) {
         int max_index = 0;
         for (int i = 1; i <= right; ++i) {
@@ -43,6 +46,55 @@ void selection_sort(std::vector<int> &v) {
             }
         }
         std::swap(v[right], v[max_index]);
+    }
+}
+
+void selection_sort2(std::vector<int> &v) {
+    if (v.size() == 0) {
+        return;
+    }
+
+    for (int left = 0; left < v.size() - 1; ++left) {
+        int min_index = left;
+
+        for (int j = left + 1; j < v.size(); ++j) {
+            if (v[j] < v[min_index]) {
+                min_index = j;
+            }
+        }
+        std::swap(v[min_index], v[left]);
+    }
+}
+
+// essentially the same as 2, but use library function
+// find smallest element, exechange it with index 0. do it n - 1 times
+void selection_sort3(std::vector<int> &numbers) {
+    if (numbers.size() == 0) {
+        return;
+    }
+    // warning
+    for (int i = 0; i < numbers.size() - 1; ++i) {
+        int curr = numbers[i];
+        std::vector<int>::iterator it = std::min_element(numbers.begin() + i + 1, numbers.end());
+
+        if (*it < curr) {
+            std::swap(*it, numbers[i]);
+        }
+    }
+}
+
+// same as 2, but using swap to find smallest element, not efficient
+void selection_sort4(std::vector<int> &n) {
+    if (n.size() == 0) {
+        return;
+    }
+    // warning: infinity loop
+    for (int i = 0; i < n.size() - 1; ++i) {
+        for (int j = i + 1; j < n.size(); ++j) {
+            if (n[i] > n[j]) {
+                std::swap(n[i], n[j]);
+            }
+        }
     }
 }
 
@@ -87,13 +139,36 @@ void merge_sort(std::vector<int> &v, int p, int r) {
     }
 }
 
+// book's idea
+// travesal from end to begin, each time the first one is the smallest
+// pointer j is align with i, i and j are at most at v.size() - 2
 void bubble_sort(std::vector<int> &v) {
+    if (v.size() == 0) {
+        return;
+    }
+    // warning, if v.size() == 0, v.size() - 1 is the max unsigned integer
     for (int i = 0; i < v.size() - 1; ++i) {
-        for (int j = v.size() - 1; j > i; --j) {
-            if (v[j] < v[j - 1]) {
-                std::swap(v[j], v[j - 1]);
+
+        for (int j = v.size() - 2; j >= i; --j) {
+            if (v[j + 1] < v[j]) {
+                std::swap(v[j], v[j + 1]);
             }
         }
+    }
+}
+
+// since travsel from begin to end. each time last one is the biggest
+void bubble_sort2(std::vector<int> &n) {
+
+    int right = n.size() - 1;
+    while (right >= 0) {
+
+        for (int i = 0; i < right; ++i) {
+            if (n[i] > n[i + 1]) {
+                std::swap(n[i], n[i + 1]);
+            }
+        }
+        --right;
     }
 }
 
@@ -1341,14 +1416,58 @@ void verify_wiggly_permutation(const std::vector<int> &v) {
     }
 }
 
+// Function to generate a vector of random numbers of given length
+std::vector<int> generate_random_vector(int length) {
+    std::vector<int> v(length);
+    for (int i = 0; i < length; ++i) {
+        v[i] = rand();
+    }
+    return v;
+}
+
 int main() {
-    // std::vector<int> v = {5, 2, 4, 6, 1, 3};
-    // insertion_sort(v);
-    // merge_sort(v, 0, v.size() - 1);
-    // bubble_sort(v);
-    // for (auto i : v) {
-    //     std::cout << i << " ";
-    // }
+    const int num_tests = 1000;
+
+    // Vector of sorting function pointers
+    std::vector<std::function<void(std::vector<int>&)>> sort_functions = {
+        bubble_sort,
+        bubble_sort2,
+        insertion_sort,
+        [](std::vector<int>& v) { merge_sort(v, 0, v.size() - 1); },
+        selection_sort,
+        selection_sort2,
+        selection_sort3,
+        selection_sort4
+    };
+
+    for (int i = 0; i < num_tests; ++i) {
+        // Vector to store sorted results
+        std::vector<std::vector<int>> sorted_results;
+
+        int length = rand() % 1000;
+        length = i;
+
+
+        std::vector<int> v = generate_random_vector(length);
+
+        // Apply each sort function and store the result
+        for (auto& sort_func : sort_functions) {
+            std::vector<int> v_copy = v;
+            sort_func(v_copy);
+            sorted_results.push_back(v_copy);
+        }
+
+        // Compare all sorted results
+        for (int j = 1; j < sorted_results.size(); ++j) {
+            if (sorted_results[0] != sorted_results[j]) {
+                std::cerr << "Error: Sorting results are not the same." << std::endl;
+                return 1;
+            }
+        }
+        std::cout << "test " << i << " successful!" << std::endl;
+    }
+    std::cout << "All sorting results are the same." << std::endl;
+    
     // Heap<int> h(v, v.size());
 
     // build_max_heap(h, h.size());
@@ -1506,12 +1625,12 @@ int main() {
 
     // std::cout << p_fib(15) << std::endl;
 
-    std::vector<double> a = {0, 1, 2, 3};
-    std::vector<std::complex<double>> b = fft(a);
-    for (auto i : b) {
-        std::cout << i << " ";
-    }
-    std::cout << std::endl;
+    // std::vector<double> a = {0, 1, 2, 3};
+    // std::vector<std::complex<double>> b = fft(a);
+    // for (auto i : b) {
+    //     std::cout << i << " ";
+    // }
+    // std::cout << std::endl;
 
     // std::vector<int> v = {3, 2, 1, 6, 5, 4};
     // wiggly_permutation(v);
